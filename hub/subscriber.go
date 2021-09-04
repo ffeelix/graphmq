@@ -2,13 +2,14 @@ package hub
 
 import (
 	"context"
-	. "graphmq/types"
 	"time"
+
+	. "github.com/graph-labs-io/graphmq/types"
 )
 
 type Subscriber struct {
 	Topic
-	recv chan (interface{})
+	Recv chan (interface{})
 }
 
 // Broudcast attempts to broudcast a message to the underlying recv channel with a timeout
@@ -29,7 +30,7 @@ func (s Subscriber) Broudcast(message interface{}) error {
 // Broudcast attempts to broudcast a message to the underlying recv channel
 func (s Subscriber) broudcast(ctx context.Context, message interface{}) error {
 	select {
-	case s.recv <- message:
+	case s.Recv <- message:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

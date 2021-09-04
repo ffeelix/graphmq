@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"graphmq/hub"
-	. "graphmq/types"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/graph-labs-io/graphmq/hub"
+	. "github.com/graph-labs-io/graphmq/types"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,7 +23,8 @@ var (
 		WriteBufferSize: 1024,
 	}
 
-	port = "80"
+	port             = "80"
+	healthCheckTimer = 5 * time.Second
 )
 
 func (g *GraphMQ) HandlePublish(w http.ResponseWriter, r *http.Request) {
@@ -36,26 +39,51 @@ func (g *GraphMQ) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	g.hub.Broudcast(m)
+
 }
+
+// HandleSubscriber creates a new subscriber
 func (g *GraphMQ) HandleSubscriber(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+	defer ws.Close()
+
 	for {
 		var s NewSubscriber
 		err := ws.ReadJSON(&s)
 
 		if err != nil {
-			ws.Close()
+
 			return
 		}
+		log.Println("Sucessfully created subscriber: ", s.Topic)
+
+		recv := make(chan (interface{}))
+
 		subscriber := hub.Subscriber{
-			Topic: Topic(s.Topic),
+			Topic: s.Topic,
+			Recv:  recv,
 		}
 		g.hub.Subscribe(subscriber)
+		defer g.hub.Unsubscribe(subscriber)
 
-		log.Println("Sucessfully created subscriber: ", s.Topic)
+		timer := time.NewTimer(healthCheckTimer)
+		for {
+			select {
+			case m := <-recv:
+				ws.WriteJSON(m)
+			case <-timer.C:
+				err := ws.WriteMessage(websocket.PingMessage, nil)
+				if err != nil {
+					log.Println("Failed health check")
+					return
+				}
+			}
+		}
 
 	}
 }

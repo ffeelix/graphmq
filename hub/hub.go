@@ -1,9 +1,10 @@
 package hub
 
 import (
-	. "graphmq/types"
 	"log"
 	"strings"
+
+	. "github.com/graph-labs-io/graphmq/types"
 )
 
 // Hub handles all subscriber & producer interactions
