@@ -78,7 +78,9 @@ func (h *Hub) worker() {
 			// We can just send back the cached answer if it exists
 			if message, ok := h.cache[subscriber.Topic]; ok {
 
-				subscriber.Broudcast(message)
+				if err := subscriber.Broudcast(message); err != nil {
+					log.Println(err.Error())
+				}
 				continue
 				// log.Println("Successfully message pulled from cache")
 			}
