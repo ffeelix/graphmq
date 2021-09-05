@@ -52,41 +52,39 @@ func (g *GraphMQ) HandleSubscriber(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
+	var s NewSubscriber
+	err = ws.ReadJSON(&s)
+
+	if err != nil {
+
+		return
+	}
+	log.Println("Sucessfully created Subscriber:", s.Topic)
+
+	recv := make(chan (interface{}))
+
+	subscriber := hub.Subscriber{
+		Topic: s.Topic,
+		Recv:  recv,
+	}
+	g.hub.Subscribe(subscriber)
+	defer g.hub.Unsubscribe(subscriber)
+
+	timer := time.NewTimer(healthCheckTimer)
 	for {
-		var s NewSubscriber
-		err := ws.ReadJSON(&s)
-
-		if err != nil {
-
-			return
-		}
-		log.Println("Sucessfully created Subscriber:", s.Topic)
-
-		recv := make(chan (interface{}))
-
-		subscriber := hub.Subscriber{
-			Topic: s.Topic,
-			Recv:  recv,
-		}
-		g.hub.Subscribe(subscriber)
-		defer g.hub.Unsubscribe(subscriber)
-
-		timer := time.NewTimer(healthCheckTimer)
-		for {
-			timer.Reset(healthCheckTimer)
-			select {
-			case m := <-recv:
-				ws.WriteJSON(m)
-			case <-timer.C:
-				err := ws.WriteMessage(websocket.PingMessage, nil)
-				if err != nil {
-					log.Println("Failed health check")
-					return
-				}
+		timer.Reset(healthCheckTimer)
+		select {
+		case m := <-recv:
+			ws.WriteJSON(m)
+		case <-timer.C:
+			err := ws.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				log.Println("Failed health check")
+				return
 			}
 		}
-
 	}
+
 }
 
 func main() {
