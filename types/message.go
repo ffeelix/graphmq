@@ -9,10 +9,11 @@ var (
 )
 
 type Method string
+type Message interface{}
 
 type MessageEvent struct {
-	Topic       Topic       `json:"topic"`
-	Message     interface{} `json:"message"`
-	Method      Method      `json:"method"`
-	IsPersisted bool        `json:"isPersisted"`
+	Topic       Topic   `json:"topic"`
+	Message     Message `json:"message"`
+	Method      Method  `json:"method"`
+	IsPersisted bool    `json:"isPersisted"`
 }

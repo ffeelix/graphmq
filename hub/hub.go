@@ -21,7 +21,7 @@ type Hub struct {
 
 	broudcast chan (MessageEvent)
 
-	cache map[Topic]MessageEvent
+	cache map[Topic]Message
 }
 
 // NewHub starts a new hub while also starting a goroutine
@@ -33,7 +33,7 @@ func NewHub() *Hub {
 		register:   make(chan Subscriber),
 		unregister: make(chan Subscriber),
 		broudcast:  make(chan MessageEvent),
-		cache:      make(map[Topic]MessageEvent),
+		cache:      make(map[Topic]Message),
 	}
 	go h.worker()
 	return h
@@ -44,7 +44,7 @@ func NewHub() *Hub {
 func (h *Hub) fanout(message MessageEvent) {
 	for subscriber := range h.subscribers {
 		if strings.EqualFold(string(subscriber.Topic), string(message.Topic)) {
-			if err := subscriber.Broudcast(message); err != nil {
+			if err := subscriber.Broudcast(message.Message); err != nil {
 				log.Println(err.Error())
 			}
 		}
@@ -56,7 +56,8 @@ func (h *Hub) fanout(message MessageEvent) {
 func (h *Hub) singleBroudcast(message MessageEvent) {
 	for subscriber := range h.subscribers {
 		if strings.EqualFold(string(subscriber.Topic), string(message.Topic)) {
-			if err := subscriber.Broudcast(message); err != nil {
+
+			if err := subscriber.Broudcast(message.Message); err != nil {
 				log.Println(err.Error())
 				continue
 
@@ -89,17 +90,17 @@ func (h *Hub) worker() {
 
 			delete(h.subscribers, subscriber)
 
-		case message := <-h.broudcast:
-			switch message.Method {
+		case messageEvent := <-h.broudcast:
+			switch messageEvent.Method {
 			case FanoutMessage:
-				h.fanout(message)
+				h.fanout(messageEvent)
 			case SingleReceiver:
-				h.singleBroudcast(message)
+				h.singleBroudcast(messageEvent)
 			}
 
-			if message.IsPersisted {
+			if messageEvent.IsPersisted {
 				// If the message requires persistence then we can add it to the local cache
-				h.cache[message.Topic] = message
+				h.cache[messageEvent.Topic] = messageEvent.Message
 
 			}
 		}

@@ -60,7 +60,7 @@ func (g *GraphMQ) HandleSubscriber(w http.ResponseWriter, r *http.Request) {
 
 			return
 		}
-		log.Println("Sucessfully created subscriber: ", s.Topic)
+		log.Println("Sucessfully created Subscriber:", s.Topic)
 
 		recv := make(chan (interface{}))
 
@@ -73,6 +73,7 @@ func (g *GraphMQ) HandleSubscriber(w http.ResponseWriter, r *http.Request) {
 
 		timer := time.NewTimer(healthCheckTimer)
 		for {
+			timer.Reset(healthCheckTimer)
 			select {
 			case m := <-recv:
 				ws.WriteJSON(m)
