@@ -59,7 +59,6 @@ func (g *GraphMQ) HandleSubscriber(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	log.Println("Sucessfully created Subscriber:", s.Topic)
 
 	recv := make(chan (interface{}))
 

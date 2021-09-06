@@ -1,8 +1,11 @@
 package hub
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	. "github.com/graph-labs-io/graphmq/types"
 )
@@ -73,24 +76,31 @@ func (h *Hub) worker() {
 	for {
 		select {
 		case subscriber := <-h.register:
+
 			// Create a new entry with the specified subscriber
 
 			// We can just send back the cached answer if it exists
 			if message, ok := h.cache[subscriber.Topic]; ok {
+				func() {
+					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+					defer cancel()
 
-				if err := subscriber.Broudcast(message); err != nil {
-					log.Println(err.Error())
-				}
+					if err := subscriber.BroudcastWithTimeout(ctx, message); err != nil {
+						log.Println(err.Error())
+					}
+				}()
+
 				continue
 				// log.Println("Successfully message pulled from cache")
 			}
 
 			h.subscribers[subscriber] = true
+			log.Println(fmt.Sprintf("Sucessfully created Subscriber: %s | Total Subs: %d", subscriber.Topic, len(h.subscribers)))
 
 		case subscriber := <-h.unregister:
-			log.Println("Deleted subscriber")
 
 			delete(h.subscribers, subscriber)
+			log.Println(fmt.Sprintf("Sucessfully Deleted Subscriber: %s | Total Subs: %d", subscriber.Topic, len(h.subscribers)))
 
 		case messageEvent := <-h.broudcast:
 			switch messageEvent.Method {
