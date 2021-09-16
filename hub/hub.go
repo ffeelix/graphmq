@@ -34,6 +34,7 @@ func NewHub() *Hub {
 
 	h := &Hub{
 		subscribers: make(map[Subscriber]bool),
+		deleteCache: make(chan Topic),
 
 		register:   make(chan Subscriber),
 		unregister: make(chan Subscriber),
@@ -98,7 +99,10 @@ func (h *Hub) worker() {
 
 			h.subscribers[subscriber] = true
 			log.Println(fmt.Sprintf("Sucessfully created Subscriber: %s | Total Subs: %d", subscriber.Topic, len(h.subscribers)))
+		case topic := <-h.deleteCache:
 
+			delete(h.cache, topic)
+			log.Println(fmt.Sprintf("Successfully deleted cache for topic: %s", topic))
 		case subscriber := <-h.unregister:
 
 			delete(h.subscribers, subscriber)
