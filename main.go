@@ -31,15 +31,27 @@ func (g *GraphMQ) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	var m MessageEvent
 
 	err = json.Unmarshal(body, &m)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	g.hub.Broudcast(m)
+
+}
+func (g *GraphMQ) HandleDeleteCache(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	g.hub.DeleteCache(Topic(string(body)))
 
 }
 
@@ -96,6 +108,7 @@ func main() {
 
 	http.HandleFunc("/publish", mq.HandlePublish)
 	http.HandleFunc("/subscribe", mq.HandleSubscriber)
+	http.HandleFunc("/delete", mq.HandleDeleteCache)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}

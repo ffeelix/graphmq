@@ -24,6 +24,8 @@ type Hub struct {
 
 	broudcast chan (MessageEvent)
 
+	deleteCache chan (Topic)
+
 	cache map[Topic]Message
 }
 
@@ -117,6 +119,11 @@ func (h *Hub) worker() {
 			}
 		}
 	}
+}
+
+func (h *Hub) DeleteCache(t Topic) {
+	h.deleteCache <- t
+
 }
 
 // Unsubscribe removes the specified subscriber from the hub
