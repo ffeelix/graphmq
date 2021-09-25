@@ -26,7 +26,7 @@ type Hub struct {
 
 	deleteCache chan (Topic)
 
-	cache map[Topic]Message
+	cache map[Topic]MessageEvent
 }
 
 // NewHub starts a new hub while also starting a goroutine
@@ -39,10 +39,24 @@ func NewHub() *Hub {
 		register:   make(chan Subscriber),
 		unregister: make(chan Subscriber),
 		broudcast:  make(chan MessageEvent),
-		cache:      make(map[Topic]Message),
+		cache:      make(map[Topic]MessageEvent),
 	}
 	go h.worker()
 	return h
+
+}
+
+func (h *Hub) FetchCacheIfAvailable(t Topic) (MessageEvent, bool) {
+	if m, ok := h.cache[t]; ok {
+		if !m.IsExpired() {
+			return m, true
+		}
+
+		return m, false
+
+	}
+
+	return MessageEvent{}, false
 
 }
 
@@ -83,18 +97,17 @@ func (h *Hub) worker() {
 			// Create a new entry with the specified subscriber
 
 			// We can just send back the cached answer if it exists
-			if message, ok := h.cache[subscriber.Topic]; ok {
+			if message, ok := h.FetchCacheIfAvailable(subscriber.Topic); ok {
 				func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
 					defer cancel()
 
-					if err := subscriber.BroudcastWithTimeout(ctx, message); err != nil {
+					if err := subscriber.BroudcastWithTimeout(ctx, message.Message); err != nil {
 						log.Println(err.Error())
 					}
 				}()
 
 				continue
-				// log.Println("Successfully message pulled from cache")
 			}
 
 			h.subscribers[subscriber] = true
@@ -117,8 +130,9 @@ func (h *Hub) worker() {
 			}
 
 			if messageEvent.IsPersisted {
+
 				// If the message requires persistence then we can add it to the local cache
-				h.cache[messageEvent.Topic] = messageEvent.Message
+				h.cache[messageEvent.Topic] = messageEvent
 
 			}
 		}
