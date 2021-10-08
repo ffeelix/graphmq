@@ -82,6 +82,10 @@ func (h *Hub) singleBroudcast(message MessageEvent) {
 				continue
 
 			}
+
+			// We remove the subscriber afterwards as well
+			delete(h.subscribers, subscriber)
+
 			return
 		}
 	}
