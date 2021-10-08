@@ -107,7 +107,6 @@ func (h *Hub) worker() {
 					}
 				}()
 
-				continue
 			}
 
 			h.subscribers[subscriber] = true
